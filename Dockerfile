@@ -36,23 +36,22 @@ LABEL maintainer="Microsoft" \
 # libintl and icu-libs - required by azure devops artifact (az extension add --name azure-devops)
 
 # We don't use openssl (3.0) for now. We only install it so that users can use it.
+WORKDIR azure-cli
+COPY . /azure-cli
+
+ARG JP_VERSION="0.1.3"
+
+# 1. Build packages and store in tmp dir
+# 2. Install the cli and the other command modules that weren't included
 RUN apk add --no-cache bash openssh ca-certificates jq curl openssl perl git zip \
  && apk add --no-cache --virtual .build-deps gcc make openssl-dev libffi-dev musl-dev linux-headers \
  && apk add --no-cache libintl icu-libs libc6-compat \
  && apk add --no-cache bash-completion \
- && update-ca-certificates
-
-ARG JP_VERSION="0.1.3"
-
-RUN curl -L https://github.com/jmespath/jp/releases/download/${JP_VERSION}/jp-linux-amd64 -o /usr/local/bin/jp \
- && chmod +x /usr/local/bin/jp
-
-WORKDIR azure-cli
-COPY . /azure-cli
-
-# 1. Build packages and store in tmp dir
-# 2. Install the cli and the other command modules that weren't included
-RUN ./scripts/install_full.sh && python ./scripts/trim_sdk.py \
+ && update-ca-certificates \
+ && curl -L https://github.com/jmespath/jp/releases/download/${JP_VERSION}/jp-linux-amd64 -o /usr/local/bin/jp \
+ && chmod +x /usr/local/bin/jp \
+ && ./scripts/install_full.sh \
+ && python ./scripts/trim_sdk.py \
  && cat /azure-cli/az.completion > ~/.bashrc \
  && runDeps="$( \
     scanelf --needed --nobanner --recursive /usr/local \
@@ -61,7 +60,8 @@ RUN ./scripts/install_full.sh && python ./scripts/trim_sdk.py \
         | xargs -r apk info --installed \
         | sort -u \
     )" \
- && apk add --virtual .rundeps $runDeps
+ && apk add --virtual .rundeps $runDeps \
+ && apk del openssh ca-certificates jq curl openssl perl git zip .build-deps gcc make openssl-dev libffi-dev musl-dev linux-headers libintl icu-libs libc6-compat bash-completion
 
 WORKDIR /
 
