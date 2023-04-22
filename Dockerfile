@@ -61,9 +61,9 @@ RUN apk add --no-cache bash openssh ca-certificates jq curl openssl perl git zip
         | sort -u \
     )" \
  && apk add --virtual .rundeps $runDeps \
- && mkdir /.azure \
- && chown 12345 /.azure \
- && az extension add --name connectedk8s \
+ && addgroup -g 12345 12345 \
+ && adduser -D -G 12345 12345 \
+ && su 12345 -c "az extension add --name connectedk8s" \
  && /usr/bin/curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
  && chmod +x ./kubectl  \
  &&  mv ./kubectl /usr/local/bin/kubectl \
